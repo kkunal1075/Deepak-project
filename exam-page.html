@@ -1,0 +1,480 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ESP — Admin + Student (Combined)</title>
+  <style>
+    :root{
+      --blue:#002bff;
+      --white:#ffffff;
+      --muted:#555;
+      --card-shadow: 0 6px 18px rgba(0,43,255,0.12);
+      font-family: "Poppins",sans-serif;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      background:linear-gradient(135deg,#eaf3ff,#ffffff);
+      color:var(--blue);
+      display:flex;
+      flex-direction:column;
+    }
+    header{
+      background:var(--blue);
+      color:var(--white);
+      padding:16px 24px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+    }
+    header .title{font-weight:700}
+    main{padding:20px; flex:1; display:flex; gap:20px; align-items:flex-start;}
+    .col{background:var(--white); border-radius:12px; padding:18px; box-shadow:var(--card-shadow);}
+    .left{width:430px}
+    .right{flex:1}
+    label{display:block;margin-bottom:6px;font-weight:600}
+    input[type="text"], input[type="number"], textarea, select{
+      width:100%; padding:10px; border-radius:8px; border:1px solid #d5defc; margin-bottom:12px;
+    }
+    textarea{resize:vertical}
+    .btn{background:var(--blue); color:white; padding:10px 14px; border:none; border-radius:8px; cursor:pointer; font-weight:600}
+    .btn.ghost{background:#f3f6ff; color:var(--blue); border:1px solid #cfe0ff}
+    .exam-item{padding:10px;border-radius:10px;border:1px solid #e8f0ff;margin-bottom:8px; display:flex;justify-content:space-between;align-items:center}
+    .question-row{border-radius:8px;padding:10px;margin-bottom:10px;border:1px solid #f0f6ff}
+    .small{font-size:0.9rem;color:var(--muted)}
+    /* Exam UI */
+    .exam-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .timer{font-weight:700}
+    .options{margin-top:10px}
+    .option{display:block;padding:10px;border-radius:8px;border:1px solid #eef5ff;margin-bottom:8px;cursor:pointer}
+    .option input{margin-right:8px}
+    .result{padding:18px;border-radius:10px;background:#f7fbff;border:1px solid #e1f0ff}
+    @media(max-width:900px){
+      main{flex-direction:column}
+      .left{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">Exam Secure Protocol — Admin & Student Combined</div>
+    <div class="small">Blue & White • Demo (local)</div>
+  </header>
+
+  <main>
+    <!-- LEFT: Admin Controls -->
+    <section class="col left" aria-label="Admin Panel">
+      <h3>Create / Manage Exam</h3>
+
+      <label>Exam Title</label>
+      <input id="examTitle" type="text" placeholder="e.g., Mathematics - Mid Term" />
+
+      <label>Duration (minutes)</label>
+      <input id="examDuration" type="number" min="1" value="60" />
+
+      <hr style="border:none;margin:12px 0;border-top:1px solid #eef6ff">
+
+      <div id="questionsList">
+        <!-- Questions will appear here -->
+      </div>
+
+      <button class="btn ghost" onclick="addBlankQuestion()">+ Add Question</button>
+      <div style="height:8px"></div>
+      <button class="btn" onclick="saveExam()">Save Exam</button>
+      <div style="height:14px"></div>
+
+      <h4 style="margin-top:6px">Saved Exams</h4>
+      <div id="examsContainer" style="margin-top:8px"></div>
+
+      <div style="height:10px"></div>
+      <button class="btn ghost" onclick="clearAllStorage()">Clear All (local)</button>
+      <div class="small" style="margin-top:8px">Exams saved in browser localStorage. Use "Start" to preview as student.</div>
+    </section>
+
+    <!-- RIGHT: Student / Live Exam -->
+    <section class="col right" aria-label="Student Preview / Exam">
+      <div id="panelRoot">
+        <div id="noExam" class="center-block">
+          <h3 style="margin-top:0">Student Preview / Exam Mode</h3>
+          <p class="small">Select an exam from left & click <strong>Start</strong> to attempt it as a student.</p>
+        </div>
+
+        <div id="examView" style="display:none">
+          <div class="exam-header">
+            <div>
+              <div id="examName" style="font-weight:700"></div>
+              <div id="examMeta" class="small"></div>
+            </div>
+            <div>
+              <div class="small">Warnings: <span id="warnCount">0</span>/3</div>
+              <div class="timer" id="countdown">--:--</div>
+            </div>
+          </div>
+
+          <div id="questionArea"></div>
+
+          <div style="display:flex;gap:10px;margin-top:12px;align-items:center">
+            <button class="btn ghost" onclick="prevQuestion()">Previous</button>
+            <button class="btn ghost" onclick="nextQuestion()">Next</button>
+            <div style="flex:1"></div>
+            <button class="btn" onclick="submitExam()">Submit Exam</button>
+          </div>
+        </div>
+
+        <div id="resultView" style="display:none;margin-top:10px"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    /***********************
+      Data structures & init
+    ***********************/
+    const QUESTIONS_CONTAINER = document.getElementById('questionsList');
+    const EXAMS_CONTAINER = document.getElementById('examsContainer');
+    let currentQuestionId = 0; // incremental id per question input block
+
+    // load saved exams on start
+    const savedExams = JSON.parse(localStorage.getItem('esp_exams') || '[]');
+    renderSavedExams();
+
+    /***********************
+      Admin functions
+    ***********************/
+    function addBlankQuestion(data){
+      // data optionally contains {text, options:[..], correctIndex}
+      const id = ++currentQuestionId;
+      const q = data || {text:'', options:['','','',''], correctIndex:0};
+      const div = document.createElement('div');
+      div.className = 'question-row';
+      div.id = 'qrow-' + id;
+      div.innerHTML = `
+        <label>Question</label>
+        <input type="text" class="q-text" placeholder="Enter question" value="${escapeHtml(q.text)}"/>
+        <div style="display:flex;gap:8px">
+          <div style="flex:1">
+            <label>Option A</label>
+            <input type="text" class="opt opt-0" value="${escapeHtml(q.options[0]||'')}" />
+          </div>
+          <div style="flex:1">
+            <label>Option B</label>
+            <input type="text" class="opt opt-1" value="${escapeHtml(q.options[1]||'')}" />
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <div style="flex:1">
+            <label>Option C</label>
+            <input type="text" class="opt opt-2" value="${escapeHtml(q.options[2]||'')}" />
+          </div>
+          <div style="flex:1">
+            <label>Option D</label>
+            <input type="text" class="opt opt-3" value="${escapeHtml(q.options[3]||'')}" />
+          </div>
+        </div>
+        <label style="margin-top:8px">Correct Option</label>
+        <select class="correct">
+          <option value="0">A</option>
+          <option value="1">B</option>
+          <option value="2">C</option>
+          <option value="3">D</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn ghost" onclick="removeQuestion(${id})">Remove</button>
+        </div>
+      `;
+      QUESTIONS_CONTAINER.appendChild(div);
+      div.querySelector('.correct').value = q.correctIndex ?? 0;
+    }
+
+    function removeQuestion(id){
+      const el = document.getElementById('qrow-'+id);
+      if(el) el.remove();
+    }
+
+    function collectQuestionsFromUI(){
+      const rows = Array.from(document.querySelectorAll('.question-row'));
+      return rows.map(r=>{
+        const text = r.querySelector('.q-text').value.trim();
+        const opts = [
+          r.querySelector('.opt-0').value.trim(),
+          r.querySelector('.opt-1').value.trim(),
+          r.querySelector('.opt-2').value.trim(),
+          r.querySelector('.opt-3').value.trim()
+        ];
+        const correctIndex = Number(r.querySelector('.correct').value || 0);
+        return {text, options:opts, correctIndex};
+      }).filter(q => q.text && q.options.some(o=>o));
+    }
+
+    function saveExam(){
+      const title = document.getElementById('examTitle').value.trim();
+      const duration = Number(document.getElementById('examDuration').value) || 30;
+      if(!title){ alert('Please provide exam title'); return; }
+      const questions = collectQuestionsFromUI();
+      if(questions.length === 0){ alert('Add at least one question'); return; }
+      const exams = JSON.parse(localStorage.getItem('esp_exams') || '[]');
+      exams.push({id:Date.now(), title, duration, questions});
+      localStorage.setItem('esp_exams', JSON.stringify(exams));
+      // clear UI
+      document.getElementById('examTitle').value = '';
+      document.getElementById('examDuration').value = 60;
+      QUESTIONS_CONTAINER.innerHTML = '';
+      renderSavedExams();
+      alert('Exam saved locally!');
+    }
+
+    function renderSavedExams(){
+      const exams = JSON.parse(localStorage.getItem('esp_exams') || '[]');
+      EXAMS_CONTAINER.innerHTML = '';
+      if(exams.length===0){
+        EXAMS_CONTAINER.innerHTML = '<div class="small">No exams saved yet.</div>';
+        return;
+      }
+      exams.forEach(ex=>{
+        const div = document.createElement('div');
+        div.className = 'exam-item';
+        div.innerHTML = `<div>
+            <div style="font-weight:700">${escapeHtml(ex.title)}</div>
+            <div class="small">Duration: ${ex.duration} min • ${ex.questions.length} questions</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn ghost" onclick='loadExamForEdit(${ex.id})'>Edit</button>
+            <button class="btn" onclick='startExamAsStudent(${ex.id})'>Start</button>
+          </div>`;
+        EXAMS_CONTAINER.appendChild(div);
+      });
+    }
+
+    function loadExamForEdit(id){
+      const exams = JSON.parse(localStorage.getItem('esp_exams') || '[]');
+      const ex = exams.find(e=>e.id===id);
+      if(!ex) return alert('Exam not found');
+      document.getElementById('examTitle').value = ex.title;
+      document.getElementById('examDuration').value = ex.duration;
+      QUESTIONS_CONTAINER.innerHTML = '';
+      ex.questions.forEach(q=> addBlankQuestion(q));
+      // remove the loaded exam from storage (for simple edit-save overwrite)
+      const remaining = exams.filter(e=>e.id!==id);
+      localStorage.setItem('esp_exams', JSON.stringify(remaining));
+      renderSavedExams();
+      alert('Loaded exam for editing. After making changes click Save Exam.');
+    }
+
+    function clearAllStorage(){
+      if(!confirm('Clear all exams from localStorage?')) return;
+      localStorage.removeItem('esp_exams');
+      renderSavedExams();
+      alert('Cleared.');
+    }
+
+    /***********************
+      Student / Exam functions
+    ***********************/
+    let activeExam = null;
+    let studentAnswers = []; // indices per question
+    let qOrder = []; // randomized question indices
+    let optionOrder = {}; // per question randomized options order
+    let currentQIndex = 0;
+    let timerInterval = null;
+    let timeLeft = 0; // seconds
+    let warnCount = 0;
+
+    function startExamAsStudent(id){
+      const exams = JSON.parse(localStorage.getItem('esp_exams') || '[]');
+      const ex = exams.find(e=>e.id===id);
+      if(!ex) return alert('Exam not found');
+      beginExam(ex);
+    }
+
+    function beginExam(examObj){
+      activeExam = examObj;
+      // initialize student state
+      studentAnswers = new Array(examObj.questions.length).fill(null);
+      qOrder = shuffle(Array.from(examObj.questions.keys()));
+      optionOrder = {};
+      examObj.questions.forEach((q,qi) => {
+        optionOrder[qi] = shuffle([0,1,2,3]);
+      });
+      currentQIndex = 0;
+      // timer
+      timeLeft = Math.max(1, Number(examObj.duration) || 30) * 60;
+      warnCount = 0;
+      document.getElementById('warnCount').textContent = warnCount;
+      // UI
+      document.getElementById('noExam').style.display = 'none';
+      document.getElementById('resultView').style.display = 'none';
+      document.getElementById('examView').style.display = 'block';
+      document.getElementById('examName').textContent = examObj.title;
+      document.getElementById('examMeta').textContent = `${examObj.questions.length} Questions • ${examObj.duration} minutes`;
+      renderQuestion();
+      startTimer();
+      activateTabDetection();
+      scrollTop();
+    }
+
+    function renderQuestion(){
+      const qa = activeExam.questions[qOrder[currentQIndex]];
+      const originalIndex = qOrder[currentQIndex];
+      const optsIdx = optionOrder[originalIndex];
+      const qHtml = document.getElementById('questionArea');
+      qHtml.innerHTML = `
+        <div style="font-weight:700">Q${currentQIndex+1}. ${escapeHtml(qa.text)}</div>
+        <div class="options">
+          ${optsIdx.map((oi,i)=> {
+            const optText = qa.options[oi]||'';
+            const checked = (studentAnswers[originalIndex] === oi) ? 'checked' : '';
+            return `<label class="option">
+                      <input type="radio" name="opt" ${checked} onclick="selectOption(${originalIndex},${oi})" />
+                      ${escapeHtml(optText)}
+                    </label>`;
+          }).join('')}
+        </div>
+        <div class="small">Question ${currentQIndex+1} / ${activeExam.questions.length}</div>
+      `;
+    }
+
+    function selectOption(questionOriginalIndex, optionOriginalIndex){
+      studentAnswers[questionOriginalIndex] = optionOriginalIndex;
+    }
+
+    function nextQuestion(){
+      if(currentQIndex < qOrder.length-1){ currentQIndex++; renderQuestion(); scrollTop(); }
+    }
+    function prevQuestion(){
+      if(currentQIndex > 0){ currentQIndex--; renderQuestion(); scrollTop(); }
+    }
+
+    function submitExam(auto=false){
+      if(!confirm(auto ? 'Time up or too many switches. Submit exam now?' : 'Are you sure you want to submit the exam?')) return;
+      stopTimer();
+      deactivateTabDetection();
+      // compute score
+      const total = activeExam.questions.length;
+      let correct = 0, attempted=0;
+      activeExam.questions.forEach((q,idx)=>{
+        const ans = studentAnswers[idx];
+        if(ans !== null){ attempted++; }
+        if(ans === q.correctIndex) correct++;
+      });
+      const percent = Math.round((correct/total)*100);
+      // show result
+      document.getElementById('examView').style.display = 'none';
+      const rv = document.getElementById('resultView');
+      rv.style.display = 'block';
+      rv.innerHTML = `
+        <div class="result">
+          <h3>Result</h3>
+          <p class="small">Exam: <strong>${escapeHtml(activeExam.title)}</strong></p>
+          <p><strong>Score:</strong> ${correct} / ${total} (${percent}%)</p>
+          <p><strong>Attempted:</strong> ${attempted} • <strong>Unattempted:</strong> ${total - attempted}</p>
+          <div style="margin-top:10px">
+            <button class="btn" onclick="reviewAnswers()">Review Answers</button>
+            <button class="btn ghost" onclick="backToDashboard()">Back</button>
+          </div>
+        </div>
+      `;
+      // save result to localStorage (append)
+      const records = JSON.parse(localStorage.getItem('esp_results') || '[]');
+      records.push({examId: activeExam.id, title: activeExam.title, scored:percent, raw: {correct, total, attempted}, datetime: new Date().toISOString()});
+      localStorage.setItem('esp_results', JSON.stringify(records));
+    }
+
+    function reviewAnswers(){
+      // show each question with correct & selected
+      const container = document.getElementById('resultView');
+      const parts = activeExam.questions.map((q, idx) => {
+        const sel = studentAnswers[idx];
+        const correct = q.correctIndex;
+        const okClass = (sel === correct) ? '✅' : '❌';
+        return `<div style="margin-bottom:12px;padding:10px;border-radius:8px;border:1px solid #eef6ff">
+          <div style="font-weight:700">${escapeHtml(q.text)}</div>
+          <div class="small">Your Answer: ${sel===null ? '<em>Not Answered</em>' : escapeHtml(q.options[sel])} ${sel===null ? '' : (sel===correct ? '✅' : '❌')}</div>
+          <div class="small">Correct Answer: ${escapeHtml(q.options[correct])}</div>
+        </div>`;
+      }).join('');
+      container.innerHTML = `<h3>Review</h3>${parts}<div style="margin-top:10px"><button class="btn ghost" onclick="backToDashboard()">Back</button></div>`;
+      container.style.display = 'block';
+    }
+
+    function backToDashboard(){
+      // reset UI
+      document.getElementById('examView').style.display = 'none';
+      document.getElementById('resultView').style.display = 'none';
+      document.getElementById('noExam').style.display = 'block';
+      activeExam = null;
+      studentAnswers = [];
+      qOrder = [];
+      optionOrder = {};
+      currentQIndex = 0;
+      stopTimer();
+      deactivateTabDetection();
+    }
+
+    /***********************
+      Timer & tab-detection
+    ***********************/
+    function startTimer(){
+      updateTimerDisplay();
+      timerInterval = setInterval(()=>{
+        timeLeft--;
+        updateTimerDisplay();
+        if(timeLeft <= 0){
+          clearInterval(timerInterval);
+          submitExam(true);
+        }
+      },1000);
+    }
+    function stopTimer(){
+      if(timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+    }
+    function updateTimerDisplay(){
+      const mm = Math.floor(timeLeft/60).toString().padStart(2,'0');
+      const ss = (timeLeft%60).toString().padStart(2,'0');
+      document.getElementById('countdown').textContent = `${mm}:${ss}`;
+    }
+
+    // Tab/visibility detection: warn on blur / visibilitychange
+    let switchCount = 0;
+    function activateTabDetection(){
+      switchCount = 0;
+      warnCount = 0;
+      document.getElementById('warnCount').textContent = warnCount;
+      window.addEventListener('blur', onSwitch);
+      document.addEventListener('visibilitychange', onVisibilityChange);
+    }
+    function deactivateTabDetection(){
+      window.removeEventListener('blur', onSwitch);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    }
+    function onSwitch(){
+      switchCount++;
+      warnCount++;
+      document.getElementById('warnCount').textContent = warnCount;
+      alert('Warning: Switching tabs/windows is not allowed during exam. Warning ' + warnCount + ' of 3.');
+      if(warnCount >= 3){
+        // auto submit
+        submitExam(true);
+      }
+    }
+    function onVisibilityChange(){
+      if(document.hidden) onSwitch();
+    }
+
+    /***********************
+      Utilities
+    ***********************/
+    // simple shuffle
+    function shuffle(arr){ return arr.slice().sort(()=>Math.random()-0.5); }
+    function escapeHtml(str){
+      return String(str || '').replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;', "'":'&#39;' }[s]));
+    }
+    function scrollTop(){ window.scrollTo({top:0,behavior:'smooth'}); }
+
+    // small helper: after loading, ensure at least one blank question for convenience
+    if(document.querySelectorAll('.question-row').length === 0) addBlankQuestion();
+  </script>
+</body>
+</html>

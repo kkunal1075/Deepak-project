@@ -1,0 +1,147 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard | Exam Secure Protocol</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #e6f0ff, #ffffff);
+      color: #002bff;
+      min-height: 100vh;
+    }
+
+    header {
+      background-color: #002bff;
+      color: white;
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .logout-btn {
+      background: white;
+      color: #002bff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #ff4d4d;
+      color: white;
+    }
+
+    .dashboard {
+      padding: 40px;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 1rem;
+      color: #333;
+      margin-bottom: 40px;
+    }
+
+    .exam-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 0 20px;
+    }
+
+    .exam-card {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 10px rgba(0, 43, 255, 0.2);
+      padding: 20px;
+      text-align: left;
+      transition: 0.3s;
+    }
+
+    .exam-card:hover {
+      transform: translateY(-5px);
+    }
+
+    .exam-card h3 {
+      color: #002bff;
+      margin-bottom: 10px;
+    }
+
+    .exam-card p {
+      color: #555;
+      margin-bottom: 15px;
+    }
+
+    .exam-card button {
+      background: #002bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .exam-card button:hover {
+      background: #0040ff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Exam Secure Protocol</div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </header>
+
+  <section class="dashboard">
+    <h1>Welcome, Student 👋</h1>
+    <p>Here are your upcoming and ongoing exams:</p>
+
+    <div class="exam-list">
+      <div class="exam-card">
+        <h3>Mathematics - Mid Term</h3>
+        <p>Date: 12 Nov 2025 | Duration: 60 mins</p>
+        <button onclick="startExam('Mathematics')">Start Exam</button>
+      </div>
+
+      <div class="exam-card">
+        <h3>English Grammar Test</h3>
+        <p>Date: 13 Nov 2025 | Duration: 45 mins</p>
+        <button onclick="startExam('English')">Start Exam</button>
+      </div>
+
+      <div class="exam-card">
+        <h3>Science Final Exam</h3>
+        <p>Date: 15 Nov 2025 | Duration: 90 mins</p>
+        <button onclick="startExam('Science')">Start Exam</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    function startExam(subject) {
+      alert(subject + " exam started (demo)");
+      window.location.href = "exam-page.html"; // next step

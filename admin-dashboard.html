@@ -1,0 +1,328 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard | Exam Secure Protocol</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #e6f0ff, #ffffff);
+      color: #002bff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: #002bff;
+      color: white;
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+
+    .logout-btn {
+      background: white;
+      color: #002bff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .logout-btn:hover {
+      background: #ff4d4d;
+      color: white;
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+    }
+
+    aside {
+      width: 240px;
+      background: #002bff;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding-top: 30px;
+    }
+
+    aside a {
+      color: white;
+      text-decoration: none;
+      padding: 15px 20px;
+      font-weight: 500;
+      transition: 0.3s;
+    }
+
+    aside a:hover, aside a.active {
+      background: white;
+      color: #002bff;
+    }
+
+    .content {
+      flex: 1;
+      padding: 40px;
+    }
+
+    h2 {
+      color: #002bff;
+      margin-bottom: 20px;
+    }
+
+    .exam-form, .question-form {
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0, 43, 255, 0.2);
+      padding: 25px;
+      max-width: 600px;
+    }
+
+    .exam-form label, .question-form label {
+      display: block;
+      margin-bottom: 6px;
+      color: #002bff;
+      font-weight: 600;
+    }
+
+    .exam-form input, .exam-form textarea,
+    .question-form input, .question-form select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 1rem;
+    }
+
+    .exam-form button, .question-form button {
+      background: #002bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .exam-form button:hover, .question-form button:hover {
+      background: #0040ff;
+    }
+
+    .question-list {
+      margin-top: 25px;
+      background: #f9fbff;
+      border-radius: 10px;
+      padding: 15px;
+    }
+
+    .question-item {
+      border-bottom: 1px solid #ccc;
+      padding: 10px 0;
+    }
+
+    .question-item:last-child {
+      border-bottom: none;
+    }
+
+    footer {
+      text-align: center;
+      padding: 15px;
+      background: #002bff;
+      color: white;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Exam Secure Protocol - Admin</div>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </header>
+
+  <main>
+    <aside>
+      <a href="#" class="active" onclick="showSection(event, 'create')">➕ Create Exam</a>
+      <a href="#" onclick="showSection(event, 'questions')">📝 Add Questions</a>
+      <a href="#" onclick="showSection(event, 'results')">📊 View Results</a>
+      <a href="#" onclick="showSection(event, 'students')">👥 Students</a>
+    </aside>
+
+    <section class="content">
+      <!-- Create Exam Section -->
+      <div id="create" class="section">
+        <h2>Create New Exam</h2>
+        <form class="exam-form">
+          <label>Exam Title</label>
+          <input type="text" placeholder="Enter exam name" id="examTitle" />
+
+          <label>Date</label>
+          <input type="date" id="examDate" />
+
+          <label>Duration (minutes)</label>
+          <input type="number" placeholder="Enter duration" id="examDuration" />
+
+          <label>Description</label>
+          <textarea rows="3" placeholder="Short description" id="examDesc"></textarea>
+
+          <button type="button" onclick="createExam()">Create Exam</button>
+        </form>
+      </div>
+
+      <!-- Add Questions Section -->
+      <div id="questions" class="section" style="display:none;">
+        <h2>Add Questions</h2>
+        <form class="question-form">
+          <label>Question</label>
+          <input type="text" id="qText" placeholder="Enter question" required />
+
+          <label>Option A</label>
+          <input type="text" id="optA" placeholder="Option A" required />
+
+          <label>Option B</label>
+          <input type="text" id="optB" placeholder="Option B" required />
+
+          <label>Option C</label>
+          <input type="text" id="optC" placeholder="Option C" required />
+
+          <label>Option D</label>
+          <input type="text" id="optD" placeholder="Option D" required />
+
+          <label>Correct Answer</label>
+          <select id="correctAns">
+            <option value="">Select correct answer</option>
+            <option value="A">Option A</option>
+            <option value="B">Option B</option>
+            <option value="C">Option C</option>
+            <option value="D">Option D</option>
+          </select>
+
+          <button type="button" onclick="addQuestion()">Add Question</button>
+        </form>
+
+        <div class="question-list" id="questionList">
+          <h3>Added Questions:</h3>
+          <div id="questionsContainer"></div>
+        </div>
+      </div>
+
+      <!-- Results Section -->
+      <div id="results" class="section" style="display:none;">
+        <h2>Exam Results</h2>
+        <table border="1" cellpadding="8" width="100%">
+          <tr><th>Exam</th><th>Student</th><th>Score</th><th>Status</th></tr>
+          <tr><td>Math Test</td><td>Ravi Kumar</td><td>85%</td><td>Passed</td></tr>
+          <tr><td>Science Final</td><td>Priya Sharma</td><td>78%</td><td>Passed</td></tr>
+        </table>
+      </div>
+
+      <!-- Students Section -->
+      <div id="students" class="section" style="display:none;">
+        <h2>Registered Students</h2>
+        <ul>
+          <li>Ravi Kumar</li>
+          <li>Priya Sharma</li>
+          <li>Neha Verma</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © 2025 Exam Secure Protocol | Admin Panel
+  </footer>
+
+  <script>
+    let questions = [];
+
+    function logout() {
+      alert("Admin logged out.");
+      window.location.href = "login.html";
+    }
+
+    function showSection(event, id) {
+      document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+      document.querySelectorAll('aside a').forEach(a => a.classList.remove('active'));
+      event.target.classList.add('active');
+    }
+
+    function createExam() {
+      const title = document.getElementById('examTitle').value;
+      const date = document.getElementById('examDate').value;
+      const duration = document.getElementById('examDuration').value;
+      const desc = document.getElementById('examDesc').value;
+
+      if (!title || !date || !duration) {
+        alert("Please fill all required fields!");
+        return;
+      }
+
+      alert(`Exam "${title}" created successfully!`);
+    }
+
+    function addQuestion() {
+      const qText = document.getElementById('qText').value;
+      const optA = document.getElementById('optA').value;
+      const optB = document.getElementById('optB').value;
+      const optC = document.getElementById('optC').value;
+      const optD = document.getElementById('optD').value;
+      const correct = document.getElementById('correctAns').value;
+
+      if (!qText || !optA || !optB || !optC || !optD || !correct) {
+        alert("Please fill all question fields!");
+        return;
+      }
+
+      const question = {
+        text: qText,
+        options: { A: optA, B: optB, C: optC, D: optD },
+        correct
+      };
+
+      questions.push(question);
+      displayQuestions();
+
+      // Clear inputs
+      document.querySelector('.question-form').reset();
+    }
+
+    function displayQuestions() {
+      const container = document.getElementById('questionsContainer');
+      container.innerHTML = "";
+
+      questions.forEach((q, index) => {
+        const div = document.createElement('div');
+        div.className = "question-item";
+        div.innerHTML = `
+          <strong>Q${index + 1}:</strong> ${q.text}<br>
+          A) ${q.options.A} &nbsp; 
+          B) ${q.options.B} &nbsp; 
+          C) ${q.options.C} &nbsp; 
+          D) ${q.options.D}<br>
+          ✅ <em>Correct Answer:</em> <b>${q.correct}</b>
+        `;
+        container.appendChild(div);
+      });
+    }
+  </script>
+</body>
+</html>
